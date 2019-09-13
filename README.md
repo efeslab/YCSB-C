@@ -29,3 +29,6 @@ Note that we do not have load and run commands as the original YCSB. Specify
 how many records to load by the recordcount property. Reference properties
 files in the workloads dir.
 
+# WORK WITH STRATA
+1. source ./build.env
+2. source strata's build.env (linking against customized glibc)
