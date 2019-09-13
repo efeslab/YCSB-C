@@ -4,6 +4,7 @@
 
 #include "leveldb_db.h"
 #include <iostream>
+#include "leveldb/options.h"
 
 using namespace std;
 
@@ -12,6 +13,8 @@ namespace ycsbc {
         leveldb::Options options;
         options.create_if_missing = true;
         options.compression = leveldb::kNoCompression;
+        options.write_buffer_size = 512*1024*1024; // 512MB
+        options.max_file_size = 512*1024*1024; // 512MB
 
         leveldb::Status s = leveldb::DB::Open(options,dbfilename,&db_);
         if(!s.ok()){
