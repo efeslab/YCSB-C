@@ -1,7 +1,7 @@
-CC=g++
-CFLAGS=-std=c++11 -g -Wall -pthread -I./
-LDFLAGS= -lpthread -ltbb -lhiredis -lleveldb
-SUBDIRS=core db redis
+CXX?=g++9.2
+CXXFLAGS+=-std=c++11 -g -Wall -pthread -I./
+LDFLAGS+= -lpthread -lleveldb
+SUBDIRS=core db
 SUBSRCS=$(wildcard core/*.cc) $(wildcard db/*.cc)
 OBJECTS=$(SUBSRCS:.cc=.o)
 EXEC=ycsbc
@@ -12,7 +12,7 @@ $(SUBDIRS):
 	$(MAKE) -C $@
 
 $(EXEC): $(wildcard *.cc) $(OBJECTS)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
 clean:
 	for dir in $(SUBDIRS); do \
