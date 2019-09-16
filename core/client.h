@@ -10,20 +10,27 @@
 #define YCSB_C_CLIENT_H_
 
 #include <string>
+#include <cstring>
+#include <x86intrin.h>
 #include "db.h"
 #include "core_workload.h"
 #include "utils.h"
-
+#define TIMER(t, b) {uint64_t tmp=__rdtsc(); b t+=__rdtsc() - tmp;}
 namespace ycsbc {
 
 class Client {
  public:
-  Client(DB &db, CoreWorkload &wl) : db_(db), workload_(wl) { }
+  Client(DB &db, CoreWorkload &wl) : db_(db), workload_(wl) {
+      std::memset(op_timer, 0, sizeof(op_timer));
+      std::memset(op_cnt, 0, sizeof(op_cnt));
+  }
   
   virtual bool DoInsert();
   virtual bool DoTransaction();
   
   virtual ~Client() { }
+  uint32_t op_cnt[NUM_OPERATIONS];
+  uint64_t op_timer[NUM_OPERATIONS];
   
  protected:
   
@@ -73,20 +80,26 @@ inline int Client::TransactionRead() {
   const std::string &table = workload_.NextTable();
   const std::string &key = workload_.NextTransactionKey();
   std::vector<DB::KVPair> result;
+  int ret;
+  ++op_cnt[READ];
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
     fields.push_back("field" + workload_.NextFieldName());
-    return db_.Read(table, key, &fields, result);
+    TIMER(op_timer[READ], ret = db_.Read(table, key, &fields, result););
   } else {
-    return db_.Read(table, key, NULL, result);
+    TIMER(op_timer[READ], ret = db_.Read(table, key, NULL, result););
   }
+  return ret;
 }
 
 inline int Client::TransactionReadModifyWrite() {
   const std::string &table = workload_.NextTable();
   const std::string &key = workload_.NextTransactionKey();
   std::vector<DB::KVPair> result;
+  int ret;
 
+  ++op_cnt[READMODIFYWRITE];
+  uint64_t begin_tsc = __rdtsc();
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
     fields.push_back("field" + workload_.NextFieldName());
@@ -101,7 +114,9 @@ inline int Client::TransactionReadModifyWrite() {
   } else {
     workload_.BuildUpdate(values);
   }
-  return db_.Update(table, key, values);
+  ret = db_.Update(table, key, values);
+  op_timer[READMODIFYWRITE] += __rdtsc() - begin_tsc;
+  return ret;
 }
 
 inline int Client::TransactionScan() {
@@ -109,33 +124,42 @@ inline int Client::TransactionScan() {
   const std::string &key = workload_.NextTransactionKey();
   int len = workload_.NextScanLength();
   std::vector<std::vector<DB::KVPair>> result;
+  int ret;
+  ++op_cnt[SCAN];
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
     fields.push_back("field" + workload_.NextFieldName());
-    return db_.Scan(table, key, len, &fields, result);
+    TIMER(op_timer[SCAN], ret = db_.Scan(table, key, len, &fields, result););
   } else {
-    return db_.Scan(table, key, len, NULL, result);
+    TIMER(op_timer[SCAN], ret = db_.Scan(table, key, len, NULL, result););
   }
+  return ret;
 }
 
 inline int Client::TransactionUpdate() {
   const std::string &table = workload_.NextTable();
   const std::string &key = workload_.NextTransactionKey();
   std::vector<DB::KVPair> values;
+  int ret;
+  ++op_cnt[UPDATE];
   if (workload_.write_all_fields()) {
     workload_.BuildValues(values);
   } else {
     workload_.BuildUpdate(values);
   }
-  return db_.Update(table, key, values);
+  TIMER(op_timer[UPDATE], ret = db_.Update(table, key, values););
+  return ret;
 }
 
 inline int Client::TransactionInsert() {
   const std::string &table = workload_.NextTable();
   const std::string &key = workload_.NextSequenceKey();
   std::vector<DB::KVPair> values;
+  int ret;
+  ++op_cnt[INSERT];
   workload_.BuildValues(values);
-  return db_.Insert(table, key, values);
+  TIMER(op_timer[INSERT], ret = db_.Insert(table, key, values););
+  return ret;
 } 
 
 } // ycsbc

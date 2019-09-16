@@ -19,13 +19,21 @@
 #include "utils.h"
 
 namespace ycsbc {
+#define FOREACH_OP(FN) \
+        FN(INSERT)   \
+        FN(READ)  \
+        FN(UPDATE)   \
+        FN(SCAN)  \
+        FN(READMODIFYWRITE)
 
+#define GENERATE_ENUM(ENUM) ENUM,
+#define GENERATE_STRING(STRING) #STRING,
 enum Operation {
-  INSERT,
-  READ,
-  UPDATE,
-  SCAN,
-  READMODIFYWRITE
+  FOREACH_OP(GENERATE_ENUM)
+  NUM_OPERATIONS
+};
+static const char *OperationSTRING[] = {
+  FOREACH_OP(GENERATE_STRING)
 };
 
 class CoreWorkload {

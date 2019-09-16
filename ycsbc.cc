@@ -9,6 +9,7 @@
 #include <cstring>
 #include <string>
 #include <iostream>
+#include <cstdio>
 #include <vector>
 #include <future>
 #include "core/utils.h"
@@ -16,80 +17,109 @@
 #include "core/client.h"
 #include "core/core_workload.h"
 #include "db/db_factory.h"
-
 using namespace std;
+using namespace ycsbc;
 
 void UsageMessage(const char *command);
 bool StrStartWith(const char *str, const char *pre);
 string ParseCommandLine(int argc, const char *argv[], utils::Properties &props);
-
-int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
+struct DelegateClientResult {
+    DelegateClientResult(Client *_client, int _num_ops): client(_client), num_ops(_num_ops) {}
+    ~DelegateClientResult() {
+        delete client;
+    }
+    Client *client;
+    int num_ops;
+};
+DelegateClientResult *DelegateClient(DB *db, CoreWorkload *wl, const int num_ops,
     bool is_loading) {
   db->Init();
-  ycsbc::Client client(*db, *wl);
+  Client *client = new Client(*db, *wl);
   int oks = 0;
   for (int i = 0; i < num_ops; ++i) {
     if (is_loading) {
-      oks += client.DoInsert();
+      oks += client->DoInsert();
     } else {
-      oks += client.DoTransaction();
+      oks += client->DoTransaction();
     }
   }
   db->Close();
-  return oks;
+  DelegateClientResult *res = new DelegateClientResult(client, oks);
+  return res;
 }
 
 int main(const int argc, const char *argv[]) {
   utils::Properties props;
   string file_name = ParseCommandLine(argc, argv, props);
 
-  ycsbc::DB *db = ycsbc::DBFactory::CreateDB(props);
+  DB *db = DBFactory::CreateDB(props);
   if (!db) {
     cout << "Unknown database name " << props["dbname"] << endl;
     exit(0);
   }
 
-  ycsbc::CoreWorkload wl;
+  CoreWorkload wl;
   wl.Init(props);
 
-  const int num_threads = stoi(props.GetProperty("threadcount", "1"));
+  const unsigned int num_threads = stoi(props.GetProperty("threadcount", "1"));
 
   // Loads data
-  vector<future<int>> actual_ops;
-  int total_ops = stoi(props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
-  for (int i = 0; i < num_threads; ++i) {
+  vector<future<DelegateClientResult*>> actual_ops;
+  int total_ops = stoi(props[CoreWorkload::RECORD_COUNT_PROPERTY]);
+  for (unsigned int i = 0; i < num_threads; ++i) {
     actual_ops.emplace_back(async(launch::async,
         DelegateClient, db, &wl, total_ops / num_threads, true));
   }
-  assert((int)actual_ops.size() == num_threads);
+  assert(actual_ops.size() == num_threads);
 
-  int sum = 0;
+  int num_ops_sum = 0;
   for (auto &n : actual_ops) {
     assert(n.valid());
-    sum += n.get();
+    DelegateClientResult *res = n.get();
+    num_ops_sum += res->num_ops;
+    delete res;
   }
-  cout << "# Loading records:\t" << sum << endl;
+  cout << "# Loading records:\t" << num_ops_sum << endl;
 
   // Peforms transactions
   actual_ops.clear();
-  total_ops = stoi(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
+  total_ops = stoi(props[CoreWorkload::OPERATION_COUNT_PROPERTY]);
   utils::Timer<double> timer;
   timer.Start();
-  for (int i = 0; i < num_threads; ++i) {
+  for (unsigned int i = 0; i < num_threads; ++i) {
     actual_ops.emplace_back(async(launch::async,
         DelegateClient, db, &wl, total_ops / num_threads, false));
   }
-  assert((int)actual_ops.size() == num_threads);
+  assert(actual_ops.size() == num_threads);
 
-  sum = 0;
+  num_ops_sum = 0;
+  uint32_t op_cnt[NUM_OPERATIONS] = {0};
+  uint64_t op_timer[NUM_OPERATIONS] = {0};
+  uint32_t op_cnt_sum = 0;
+  uint64_t op_timer_sum = 0;
   for (auto &n : actual_ops) {
     assert(n.valid());
-    sum += n.get();
+    DelegateClientResult *res = n.get();
+    num_ops_sum += res->num_ops;
+    for (unsigned int i=0; i < NUM_OPERATIONS; ++i) {
+        op_cnt[i] += res->client->op_cnt[i];
+        op_cnt_sum += op_cnt[i];
+        op_timer[i] += res->client->op_timer[i];
+        op_timer_sum += op_timer[i];
+    }
   }
   double duration = timer.End();
   cout << "# Transaction throughput (KTPS)" << endl;
   cout << props["dbname"] << '\t' << file_name << '\t' << num_threads << '\t';
   cout << total_ops / duration / 1000 << endl;
+  for (unsigned int i=0; i < NUM_OPERATIONS; ++i) {
+      fprintf(stderr, "%s, cnt: %u (%.2f%%), timer %lu (%.2f%%), %.2f c/op\n", OperationSTRING[i],
+              /*cnt*/ op_cnt[i], (double)(op_cnt[i])/op_cnt_sum,
+            /*timer*/ op_timer[i], (double)(op_timer[i])/op_timer_sum,
+           /* c/op */ (double(op_timer[i])/op_cnt[i]));
+  }
+  fprintf(stderr, "SUM, cnt: %u, timer: %lu, %.2f c/op\n", op_cnt_sum, op_timer_sum,
+      (double)(op_timer_sum)/op_cnt_sum);
 }
 
 string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) {
