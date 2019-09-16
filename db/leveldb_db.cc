@@ -18,7 +18,7 @@ namespace ycsbc {
 
         leveldb::Status s = leveldb::DB::Open(options,dbfilename,&db_);
         if(!s.ok()){
-            cerr<<"Can't open leveldb "<<dbfilename<<endl;
+            cerr<<"Can't open leveldb: "<<dbfilename<<"Error: "<<s.ToString()<<endl;
             exit(0);
         }
     }
@@ -32,7 +32,7 @@ namespace ycsbc {
             noResult++;
             return DB::kOK;
         }else{
-            cerr<<"read error"<<endl;
+            cerr<<"read error: "<<s.ToString()<<endl;
             exit(0);
         }
     }
@@ -45,7 +45,7 @@ namespace ycsbc {
                 value = it->key().ToString();
             }
         if(!it->Valid()){
-            cerr<<"scan error"<<endl;
+            cerr<<"scan error: "<<endl;
             exit(0);
         }
         return DB::kOK;
@@ -59,12 +59,12 @@ namespace ycsbc {
             s = db_->Put(leveldb::WriteOptions(),key,p.second);
             ++cnt;
             if(!s.ok()){
-                cerr<<"insert error"<<endl;
+                cerr<<"insert error: " << s.ToString() << endl;
                 exit(0);
             }
         }
         if(cnt != 1){
-            cerr<<"insert error\n"<<endl;
+            cerr<<"insert error: " << s.ToString() <<endl;
             exit(0);
         }
         return DB::kOK;
@@ -77,7 +77,7 @@ namespace ycsbc {
     int LevelDB::Delete(const std::string &table, const std::string &key) {
         leveldb::Status s = db_->Delete(leveldb::WriteOptions(),key);
         if(!s.ok()){
-            cerr<<"delete error"<<endl;
+            cerr<<"delete error: "<<s.ToString()<<endl;
             exit(0);
         }
         return DB::kOK;
