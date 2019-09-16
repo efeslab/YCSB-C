@@ -136,6 +136,14 @@ string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) 
       }
       props.SetProperty("slaves", argv[argindex]);
       argindex++;
+    } else if(strcmp(argv[argindex],"-dbfilename")==0){
+      argindex++;
+      if (argindex >= argc) {
+        UsageMessage(argv[0]);
+        exit(0);
+      }
+      props.SetProperty("dbfilename", argv[argindex]);
+      argindex++;
     } else if (strcmp(argv[argindex], "-P") == 0) {
       argindex++;
       if (argindex >= argc) {
