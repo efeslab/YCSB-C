@@ -29,6 +29,20 @@ Note that we do not have load and run commands as the original YCSB. Specify
 how many records to load by the recordcount property. Reference properties
 files in the workloads dir.
 
-# WORK WITH STRATA
-1. source ./build.env
-2. source strata's build.env (linking against customized glibc)
+# Setup YCSB-C with strata
+
+1. git clone https://github.com/efeslab/YCSB-C
+2. adjust bench/build.env
+3. source bench/build.env
+4. build leveldb:
+   - cd bench/leveldb
+   - mkdir build && cd build
+   - LDFLAGS=$SLDFLAGS cmake -DCMAKE_BUILD_TYPE=Release ..
+5. build YCSB-C
+   - source ${STRATA_ROOT}/bench/build.env
+   - source ${STRATA_ROOT}/bench/YCSB-C/build.env
+   - make clean && make
+6. run ycsbc
+   - cd ${STRATA_ROOT}/bench
+   - ./run.sh YCSB-C/ycsbc -db leveldb -dbfilename /mlfs/db -P YCSB-C/workloads/workload{b,c}.strata.spec
+
