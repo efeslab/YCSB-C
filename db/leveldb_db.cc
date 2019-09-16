@@ -54,18 +54,12 @@ namespace ycsbc {
     int LevelDB::Insert(const std::string &table, const std::string &key,
                std::vector<KVPair> &values){
         leveldb::Status s;
-        int cnt=0;
         for(KVPair p:values){
             s = db_->Put(leveldb::WriteOptions(),key,p.second);
-            ++cnt;
             if(!s.ok()){
                 cerr<<"insert error: " << s.ToString() << endl;
                 exit(0);
             }
-        }
-        if(cnt != 1){
-            cerr<<"insert error: " << s.ToString() <<endl;
-            exit(0);
         }
         return DB::kOK;
     }
