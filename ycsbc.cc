@@ -113,10 +113,13 @@ int main(const int argc, const char *argv[]) {
   cout << props["dbname"] << '\t' << file_name << '\t' << num_threads << '\t';
   cout << total_ops / duration / 1000 << endl;
   for (unsigned int i=0; i < NUM_OPERATIONS; ++i) {
+      // for human readable text
       fprintf(stderr, "%s, cnt: %u (%.2f%%), timer %lu (%.2f%%), %.2f c/op\n", OperationSTRING[i],
               /*cnt*/ op_cnt[i], (double)(op_cnt[i])/op_cnt_sum,
             /*timer*/ op_timer[i], (double)(op_timer[i])/op_timer_sum,
            /* c/op */ (double(op_timer[i])/op_cnt[i]));
+      // for automate.py
+      fprintf(stdout, "%s %u %lu\n", OperationSTRING[i], op_cnt[i], op_timer[i]);
   }
   fprintf(stderr, "SUM, cnt: %u, timer: %lu, %.2f c/op\n", op_cnt_sum, op_timer_sum,
       (double)(op_timer_sum)/op_cnt_sum);
