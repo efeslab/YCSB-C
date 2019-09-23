@@ -39,14 +39,12 @@ namespace ycsbc {
 
     int LevelDB::Scan(const std::string &table, const std::string &key, int len, const std::vector<std::string> *fields,
                       std::vector<std::vector<KVPair>> &result) {
-        leveldb::Iterator* it=db_->NewIterator(leveldb::ReadOptions());
-        string value;
-        for(it->Seek(key);len>0&&it->Valid();it->Next()){
-                value = it->key().ToString();
-            }
-        if(!it->Valid()){
-            cerr<<"scan error: "<<endl;
-            exit(0);
+        auto it=db_->NewIterator(leveldb::ReadOptions());
+        it->Seek(key);
+        std::string value;
+        for(int i=0;i<len&&it->Valid();i++){
+            value = it->value().ToString();
+            it->Next();
         }
         return DB::kOK;
     }
