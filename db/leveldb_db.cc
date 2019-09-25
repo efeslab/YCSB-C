@@ -41,14 +41,19 @@ namespace ycsbc {
     int LevelDB::Scan(const std::string &table, const std::string &key, int len, const std::vector<std::string> *fields,
                       std::vector<std::vector<KVPair>> &result) {
         auto it=db_->NewIterator(leveldb::ReadOptions());
-        result.reserve(len);
+        result.resize(len);
         assert(!fields->empty());
+        string keyfield = key + fields->front();
         it->Seek(key+fields->front());
+        //cerr << "Scanning seeking " << keyfield << endl;
         unsigned int total_scan = fields->size() * len;
         unsigned int fields_cnt = 0;
         std::vector<std::vector<KVPair>>::iterator result_it = result.begin();
         while (total_scan > 0) {
-            assert(it->Valid() && "Invalid iterator before scan finishes");
+            if (!it->Valid()) {
+                it->SeekToFirst();
+                assert(it->Valid() && "scan again from the beginning failed");
+            }
             result_it->push_back(std::make_pair(it->key().ToString(), it->value().ToString()));
             ++fields_cnt;
             if (fields_cnt == fields->size()) {
@@ -56,6 +61,7 @@ namespace ycsbc {
                 ++result_it;
             }
             it->Next();
+            --total_scan;
         }
         return DB::kOK;
     }

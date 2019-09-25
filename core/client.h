@@ -109,7 +109,7 @@ inline int Client::TransactionReadModifyWrite() {
   uint64_t begin_tsc = __rdtsc();
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
-    fields.push_back("field" + workload_.NextFieldName());
+    fields.push_back(workload_.NextFieldName());
     db_.Read(table, key, &fields, result);
   } else {
     db_.Read(table, key, NULL, result);
@@ -135,7 +135,7 @@ inline int Client::TransactionScan() {
   ++op_cnt[SCAN];
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
-    fields.push_back("field" + workload_.NextFieldName());
+    fields.push_back(workload_.NextFieldName());
     TIMER(op_timer[SCAN], ret = db_.Scan(table, key, len, &fields, result););
   } else {
     TIMER(op_timer[SCAN], ret = db_.Scan(table, key, len, NULL, result););
