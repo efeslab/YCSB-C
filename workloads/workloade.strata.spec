@@ -12,7 +12,7 @@
 # key, and then request a number of records; this works fine even for hashed insertion.
 
 recordcount=500000
-operationcount=6000000
+operationcount=1200000
 fieldlength=512
 workload=com.yahoo.ycsb.workloads.CoreWorkload
 
