@@ -36,6 +36,7 @@ namespace ycsbc {
 
     private:
         leveldb::DB *db_;
+        leveldb::ReadOptions readOpt;
         unsigned noResult;
     };
 }

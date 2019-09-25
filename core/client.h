@@ -9,6 +9,7 @@
 #ifndef YCSB_C_CLIENT_H_
 #define YCSB_C_CLIENT_H_
 
+#include <iostream>
 #include <string>
 #include <cstring>
 #include <x86intrin.h>
@@ -48,6 +49,9 @@ inline bool Client::DoInsert() {
   std::string key = workload_.NextSequenceKey();
   std::vector<DB::KVPair> pairs;
   workload_.BuildValues(pairs);
+  //for (DB::KVPair &p: pairs) {
+  //    std::cerr << "key: " << key << " field: " << p.first << " value: " << p.second << std::endl;
+  //}
   return (db_.Insert(workload_.NextTable(), key, pairs) == DB::kOK);
 }
 
@@ -84,8 +88,11 @@ inline int Client::TransactionRead() {
   ++op_cnt[READ];
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
-    fields.push_back("field" + workload_.NextFieldName());
+    fields.push_back(workload_.NextFieldName());
     TIMER(op_timer[READ], ret = db_.Read(table, key, &fields, result););
+    //for (DB::KVPair &p: result) {
+    //    std::cerr << "Field(" << p.first.size() << "): " << p.first << " Value(" << p.second.size() << "): " << p.second << std::endl;
+    //}
   } else {
     TIMER(op_timer[READ], ret = db_.Read(table, key, NULL, result););
   }

@@ -63,16 +63,18 @@ int main(const int argc, const char *argv[]) {
 
   const unsigned int num_threads = stoi(props.GetProperty("threadcount", "1"));
 
-  // Loads data
+  const unsigned int loaddb = stoi(props.GetProperty("loaddb", "0"));
   vector<future<DelegateClientResult*>> actual_ops;
   int total_ops = stoi(props[CoreWorkload::RECORD_COUNT_PROPERTY]);
+  int num_ops_sum = 0;
+  if (loaddb) {
+  // Loads data
   for (unsigned int i = 0; i < num_threads; ++i) {
     actual_ops.emplace_back(async(launch::async,
         DelegateClient, db, &wl, total_ops / num_threads, true));
   }
   assert(actual_ops.size() == num_threads);
 
-  int num_ops_sum = 0;
   for (auto &n : actual_ops) {
     assert(n.valid());
     DelegateClientResult *res = n.get();
@@ -80,7 +82,8 @@ int main(const int argc, const char *argv[]) {
     delete res;
   }
   cout << "# Loading records:\t" << num_ops_sum << endl;
-
+  }
+  else {
   // Peforms transactions
   actual_ops.clear();
   total_ops = stoi(props[CoreWorkload::OPERATION_COUNT_PROPERTY]);
@@ -123,6 +126,8 @@ int main(const int argc, const char *argv[]) {
   }
   fprintf(stderr, "SUM, cnt: %u, timer: %lu, %.2f c/op\n", op_cnt_sum, op_timer_sum,
       (double)(op_timer_sum)/op_cnt_sum);
+  }
+  delete db;
 }
 
 string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) {
@@ -177,6 +182,13 @@ string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) 
       }
       props.SetProperty("dbfilename", argv[argindex]);
       argindex++;
+    } else if(strcmp(argv[argindex],"-loaddb")==0){
+      argindex++;
+      if (argindex >= argc) {
+        UsageMessage(argv[0]);
+        exit(0);
+      }
+      props.SetProperty("loaddb", "1");
     } else if (strcmp(argv[argindex], "-P") == 0) {
       argindex++;
       if (argindex >= argc) {
