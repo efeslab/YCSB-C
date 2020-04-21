@@ -1,0 +1,6 @@
+[submodule "rocksdb"]
+	path = rocksdb
+	url = git@github.com:efeslab/rocksdb.git
+[submodule "leveldb"]
+	path = leveldb
+	url = https://github.com/Alkaid-Benetnash/leveldb.git
